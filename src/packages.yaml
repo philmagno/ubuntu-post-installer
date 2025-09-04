@@ -1,0 +1,25 @@
+native:
+  - "ubuntu-restricted-extras"
+  - "flatpak"
+  - "curl"
+  - "gnome-tweaks"
+  - "gnome-shell-extension-manager"
+  - "lutris"
+  - "steam"
+  - git
+flatpak:
+  - "re.sonny.Workbench"
+  - "com.github.tchx84.Flatseal"
+  - "com.usebottles.bottles"
+  - "org.gnome.Builder"
+  - "ar.xjuan.Cambalache"
+  - "io.missioncenter.MissionCenter"
+  - "com.heroicgameslauncher.hgl"
+  - io.github.streetpea.Chiaki4deck
+snap:
+  - "steam"
+  - "vlc"
+  - "opera"
+  - "intellij-idea-community"
+  - "kotlin"
+  - "discord"
