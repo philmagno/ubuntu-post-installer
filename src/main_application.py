@@ -11,8 +11,9 @@ class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        verify_if_package_are_installed("steam2")
         self.all_packages = []
-        self.installed = []
+        self.new_install = []
         self.load_files()
         self.set_default_size(800, 650)
         self.set_title("My Personal Ubuntu Configuration")
@@ -21,53 +22,55 @@ class MainWindow(Gtk.ApplicationWindow):
         tab_bar = Adw.TabBar.new()
         tab_bar.set_view(self.tab_view)
         
-        # Layout principal
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         box.append(tab_bar)
         box.append(self.tab_view)
         self.set_child(box)
 
-        # Adiciona algumas abas de exemplo
         self.create_tab("native")
         self.create_tab("flatpak")
         self.create_tab("snap")
         
-        # Caixa de botões (rodapé)
         button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        button_box.set_halign(Gtk.Align.CENTER)  # alinhado à direita
+        button_box.set_halign(Gtk.Align.CENTER)
 
-        btn_cancelar = Gtk.Button(label="Install")
-        btn_cancelar.connect("clicked", lambda b: print("Cancelar clicado"))
-        button_box.append(btn_cancelar)
-
-        btn_confirmar = Gtk.Button(label="Upgrade System")
-        btn_confirmar.connect("clicked", self.on_click_upgrade)
-        button_box.append(btn_confirmar)
-
-        # Adiciona botão ao final da caixa principal
         box.append(button_box)
 
     def on_switch_toggled(self, switch_row, pspec):
         title = switch_row.get_title()
         if switch_row.get_active():
-            print(f"toggle ativado para:{title}")
+            self.new_install.append(title)
         else:
-            print(f"toggle desativadas para:{title}")
+            self.new_install.remove(title)
 
     def create_tab(self, source):
         page = Adw.PreferencesPage()
-
-        # Criar grupo
         group = Adw.PreferencesGroup(title="Software")
         page.add(group)
 
         apps = self.all_packages[source]
         for item in apps:
-            # Criar SwitchRow
             switch_row = Adw.SwitchRow(title=item)
-            # Detectar mudança no switch
             switch_row.connect("notify::active", self.on_switch_toggled)
             group.add(switch_row)
+
+        my_button = Gtk.Button(label="Apply")
+        my_button.get_style_context().add_class("suggested-action")
+        my_button.get_style_context().add_class("raised")
+        my_button.connect("clicked", self.on_click_apply, source)
+
+        btn_upgrade_system = Gtk.Button(label="Upgrade System")
+        btn_upgrade_system.connect("clicked", self.on_click_upgrade)
+    
+        
+        group = Adw.PreferencesGroup(title="Actions")
+        page.add(group)
+
+        save_action_row = Adw.ActionRow(title="Actions")
+        save_action_row.add_suffix(my_button)
+        save_action_row.add_suffix(btn_upgrade_system)
+
+        group.add(save_action_row)
 
         page = self.tab_view.append(page)
         page.set_title(source)
@@ -84,32 +87,12 @@ class MainWindow(Gtk.ApplicationWindow):
         with open('packages.yaml', 'r') as file:
             self.all_packages = yaml.safe_load(file)
 
-    def create_pages(self, source, page, page_parent):
-        apps = self.all_packages[source]
-        for item in apps:
-            box = Gtk.CheckButton(label=item)
-            box.connect("toggled", self.on_checkbox_toggled)
-            page.append(box)
-
-        box_button = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15)
-        button = Gtk.Button(label="Apply")
-        button.connect("clicked", self.on_click_native, source)
-        box_button.append(button)
-
-        button_upgrade = Gtk.Button(label="Upgrade System")
-        button_upgrade.connect("clicked", self.on_click_upgrade)
-        box_button.append(button_upgrade)
-        page_parent.append(box_button)
-
-    def on_click_native(self, button, source):
-        install_packages(self.installed, source)
+    def on_click_apply(self, button, source):
+        install_packages(self.new_install, source)
     
     def on_click_upgrade(self, button):
         update_system()
-        
-    def on_checkbox_toggled(self, button):
-        if button.get_active():
-            self.installed.append(button.get_label())
+
 
 class MyApp(Adw.Application):
     def __init__(self, **kwargs):

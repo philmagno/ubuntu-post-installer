@@ -26,3 +26,29 @@ def update_system():
     subprocess.run(["pkexec", "apt", "update", "-y"])
     subprocess.run(["pkexec", "flatpak", "upgrade", "-y"])
 
+#
+#This is a bad way to do this, in the future will be revised
+# ( ** get the list of installed packages )
+#
+def verify_if_package_are_installed(package):
+    command = ["apt", "list"]
+    command.append(package)
+    
+    result = subprocess.run(command, capture_output=True)
+    print(result.stdout)
+    if result.stdout == "error: no matching snaps installed":
+        print("not installed")  
+    print(result.stderr)
+    print(result.stdout)
+
+def list_native_installed_packages():
+    result = subprocess.run(["apt", "list", "--installed"], capture_output=True)
+    splited = result.split('\n')
+    print(splited)
+
+def list_flatpak_installed_packages():
+    output = subprocess.run(["flatpak", "list", "--columns", "name"], capture_output=True).stdout
+    splited = output.splitlines()
+    print(splited)
+    for item in splited:
+        print(item)
