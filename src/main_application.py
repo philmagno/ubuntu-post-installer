@@ -11,53 +11,69 @@ class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        verify_if_package_are_installed("steam2")
         self.all_packages = []
-        self.installed = []
+        self.new_install = []
         self.load_files()
-        self.set_default_size(800, 300)
+        self.set_default_size(800, 650)
         self.set_title("My Personal Ubuntu Configuration")
+        
+        self.tab_view = Adw.TabView()
+        tab_bar = Adw.TabBar.new()
+        tab_bar.set_view(self.tab_view)
+        
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        box.append(tab_bar)
+        box.append(self.tab_view)
+        self.set_child(box)
 
-        header = Gtk.HeaderBar()
-        header.pack_start(Gtk.Label(label="My Personal Installer"))
-        self.set_titlebar(header)
+        self.create_tab("native")
+        self.create_tab("flatpak")
+        self.create_tab("snap")
+        
+        button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        button_box.set_halign(Gtk.Align.CENTER)
 
-        self.page_native_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        self.page_native_content.append(Gtk.Label(label="Native/APT packages"))
+        box.append(button_box)
 
-        self.page_native = self.create_configured_flowbox()
-        self.page_native_content.append(self.page_native)
+    def on_switch_toggled(self, switch_row, pspec):
+        title = switch_row.get_title()
+        if switch_row.get_active():
+            self.new_install.append(title)
+        else:
+            self.new_install.remove(title)
 
-        self.page_flatpak_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        self.page_flatpak_content.append(Gtk.Label(label="Flatpacks packages"))
+    def create_tab(self, source):
+        page = Adw.PreferencesPage()
+        group = Adw.PreferencesGroup(title="Software")
+        page.add(group)
 
-        self.page_flatpak = self.create_configured_flowbox()
-        self.page_flatpak_content.append(self.page_flatpak)
+        apps = self.all_packages[source]
+        for item in apps:
+            switch_row = Adw.SwitchRow(title=item)
+            switch_row.connect("notify::active", self.on_switch_toggled)
+            group.add(switch_row)
 
-        self.page_snap_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        self.page_snap_content.append(Gtk.Label(label="Snap packages"))
+        my_button = Gtk.Button(label="Apply")
+        my_button.get_style_context().add_class("suggested-action")
+        my_button.get_style_context().add_class("raised")
+        my_button.connect("clicked", self.on_click_apply, source)
 
-        self.page_snap = self.create_configured_flowbox()
-        self.page_snap_content.append(self.page_snap)
+        btn_upgrade_system = Gtk.Button(label="Upgrade System")
+        btn_upgrade_system.connect("clicked", self.on_click_upgrade)
+    
+        
+        group = Adw.PreferencesGroup(title="Actions")
+        page.add(group)
 
-        self.create_pages("native", self.page_native, self.page_native_content)
-        self.create_pages("flatpak", self.page_flatpak, self.page_flatpak_content)
-        self.create_pages("snap", self.page_snap, self.page_snap_content)
+        save_action_row = Adw.ActionRow(title="Actions")
+        save_action_row.add_suffix(my_button)
+        save_action_row.add_suffix(btn_upgrade_system)
 
-        stack = Gtk.Stack()
-        stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
-        stack.set_transition_duration(500)
+        group.add(save_action_row)
 
-        stack.add_titled(self.page_native_content, "page_native", "Native")
-        stack.add_titled(self.page_flatpak_content, "page_flatpak", "Flatpak")
-        stack.add_titled(self.page_snap_content, "page_snap", "Snap")
-
-        stack_switcher = Gtk.StackSwitcher(orientation=Gtk.Orientation.HORIZONTAL)
-        stack_switcher.set_stack(stack)
-
-        #add stack in main
-        self.set_child(stack)
-
-        header.set_title_widget(stack_switcher)
+        page = self.tab_view.append(page)
+        page.set_title(source)
 
     def create_configured_flowbox(self):
         flowbox = Gtk.FlowBox()
@@ -71,32 +87,12 @@ class MainWindow(Gtk.ApplicationWindow):
         with open('packages.yaml', 'r') as file:
             self.all_packages = yaml.safe_load(file)
 
-    def create_pages(self, source, page, page_parent):
-        apps = self.all_packages[source]
-        for item in apps:
-            box = Gtk.CheckButton(label=item)
-            box.connect("toggled", self.on_checkbox_toggled)
-            page.append(box)
-
-        box_button = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15)
-        button = Gtk.Button(label="Apply")
-        button.connect("clicked", self.on_click_native, source)
-        box_button.append(button)
-
-        button_upgrade = Gtk.Button(label="Upgrade System")
-        button_upgrade.connect("clicked", self.on_click_upgrade)
-        box_button.append(button_upgrade)
-        page_parent.append(box_button)
-
-    def on_click_native(self, button, source):
-        install_packages(self.installed, source)
+    def on_click_apply(self, button, source):
+        install_packages(self.new_install, source)
     
     def on_click_upgrade(self, button):
         update_system()
-        
-    def on_checkbox_toggled(self, button):
-        if button.get_active():
-            self.installed.append(button.get_label())
+
 
 class MyApp(Adw.Application):
     def __init__(self, **kwargs):
