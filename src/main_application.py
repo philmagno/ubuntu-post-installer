@@ -14,50 +14,63 @@ class MainWindow(Gtk.ApplicationWindow):
         self.all_packages = []
         self.installed = []
         self.load_files()
-        self.set_default_size(800, 300)
+        self.set_default_size(800, 650)
         self.set_title("My Personal Ubuntu Configuration")
+        
+        self.tab_view = Adw.TabView()
+        tab_bar = Adw.TabBar.new()
+        tab_bar.set_view(self.tab_view)
+        
+        # Layout principal
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        box.append(tab_bar)
+        box.append(self.tab_view)
+        self.set_child(box)
 
-        header = Gtk.HeaderBar()
-        header.pack_start(Gtk.Label(label="My Personal Installer"))
-        self.set_titlebar(header)
+        # Adiciona algumas abas de exemplo
+        self.create_tab("native")
+        self.create_tab("flatpak")
+        self.create_tab("snap")
+        
+        # Caixa de botões (rodapé)
+        button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        button_box.set_halign(Gtk.Align.CENTER)  # alinhado à direita
 
-        self.page_native_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        self.page_native_content.append(Gtk.Label(label="Native/APT packages"))
+        btn_cancelar = Gtk.Button(label="Install")
+        btn_cancelar.connect("clicked", lambda b: print("Cancelar clicado"))
+        button_box.append(btn_cancelar)
 
-        self.page_native = self.create_configured_flowbox()
-        self.page_native_content.append(self.page_native)
+        btn_confirmar = Gtk.Button(label="Upgrade System")
+        btn_confirmar.connect("clicked", self.on_click_upgrade)
+        button_box.append(btn_confirmar)
 
-        self.page_flatpak_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        self.page_flatpak_content.append(Gtk.Label(label="Flatpacks packages"))
+        # Adiciona botão ao final da caixa principal
+        box.append(button_box)
 
-        self.page_flatpak = self.create_configured_flowbox()
-        self.page_flatpak_content.append(self.page_flatpak)
+    def on_switch_toggled(self, switch_row, pspec):
+        title = switch_row.get_title()
+        if switch_row.get_active():
+            print(f"toggle ativado para:{title}")
+        else:
+            print(f"toggle desativadas para:{title}")
 
-        self.page_snap_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        self.page_snap_content.append(Gtk.Label(label="Snap packages"))
+    def create_tab(self, source):
+        page = Adw.PreferencesPage()
 
-        self.page_snap = self.create_configured_flowbox()
-        self.page_snap_content.append(self.page_snap)
+        # Criar grupo
+        group = Adw.PreferencesGroup(title="Software")
+        page.add(group)
 
-        self.create_pages("native", self.page_native, self.page_native_content)
-        self.create_pages("flatpak", self.page_flatpak, self.page_flatpak_content)
-        self.create_pages("snap", self.page_snap, self.page_snap_content)
+        apps = self.all_packages[source]
+        for item in apps:
+            # Criar SwitchRow
+            switch_row = Adw.SwitchRow(title=item)
+            # Detectar mudança no switch
+            switch_row.connect("notify::active", self.on_switch_toggled)
+            group.add(switch_row)
 
-        stack = Gtk.Stack()
-        stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
-        stack.set_transition_duration(500)
-
-        stack.add_titled(self.page_native_content, "page_native", "Native")
-        stack.add_titled(self.page_flatpak_content, "page_flatpak", "Flatpak")
-        stack.add_titled(self.page_snap_content, "page_snap", "Snap")
-
-        stack_switcher = Gtk.StackSwitcher(orientation=Gtk.Orientation.HORIZONTAL)
-        stack_switcher.set_stack(stack)
-
-        #add stack in main
-        self.set_child(stack)
-
-        header.set_title_widget(stack_switcher)
+        page = self.tab_view.append(page)
+        page.set_title(source)
 
     def create_configured_flowbox(self):
         flowbox = Gtk.FlowBox()
