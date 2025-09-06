@@ -1,6 +1,6 @@
 # ubuntu-post-installer
 My personal ubuntu software install. 
-Created only for studies propos.
+Created for study purposes only.
 
 
 Compatibility: Ubuntu 25.04
